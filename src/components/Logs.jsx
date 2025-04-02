@@ -150,7 +150,7 @@ const Logs = () => {
     return (
         <div className="logs-container">
             <h1>Monitor de Logs</h1>
-            <button onClick={() => navigate('/home')}>
+            <button onClick={() => navigate('/home')} className="tab-button">
                 Regresar al Inicio
             </button>
             <div className="controls">
