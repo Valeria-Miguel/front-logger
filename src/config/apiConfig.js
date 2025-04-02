@@ -1,11 +1,14 @@
 const API_CONFIG = {
-  BASE_URL: 'http://localhost:3001' // Cambia esto por tu IP cuando lo necesites
+  BASE_URL: 'http://localhost:3001', // Servidor 1 (con Rate Limit)
+  BASE_URL_DOS: 'http://localhost:3002' // Servidor 2 (sin Rate Limit)
 };
 
 export const getApiUrl = (endpoint = '') => {
-  // Elimina barras diagonales duplicadas
   const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
   return `${API_CONFIG.BASE_URL}${normalizedEndpoint}`;
 };
 
-export default API_CONFIG;
+export const getApiUrlDos = (endpoint = '') => {
+  const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  return `${API_CONFIG.BASE_URL_DOS}${normalizedEndpoint}`;
+};

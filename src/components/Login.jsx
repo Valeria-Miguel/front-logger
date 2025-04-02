@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link  } from "react-router-dom";
 import { getApiUrl } from '../config/apiConfig';
+import './Login.css';
 
 const Login = () => {
     const [email, setEmail] = useState("");
@@ -41,6 +42,9 @@ const Login = () => {
         }
     };
 
+    const handleRegisterRedirect = () => {
+        navigate("/register"); 
+    };
     return (
         <div className="auth-container">
             {step === 1 ? (
@@ -61,6 +65,10 @@ const Login = () => {
                         required
                     />
                     <button type="submit">Ingresar</button>
+                    <div className="register-link">
+                            ¿No tienes una cuenta? <Link to="/register">Regístrate aquí</Link>
+                        </div>
+
                     {error && <p className="error">{error}</p>}
                 </form>
             ) : (

@@ -9,15 +9,15 @@ const LogStream = () => {
         const token = localStorage.getItem('token');
      
         const eventSource = new EventSource(`${getApiUrl('/api/logs/stream')}`, {
-            headers: { Authorization: `Bearer ${token}` } // 👈 Enviar token
+            headers: { Authorization: `Bearer ${token}` } 
         });
 
         eventSource.onmessage = (event) => {
             const newLog = JSON.parse(event.data);
-            setLogs(prevLogs => [newLog, ...prevLogs.slice(0, 49)]); // Mantén máximo 50 logs
+            setLogs(prevLogs => [newLog, ...prevLogs.slice(0, 49)]); 
         };
 
-        return () => eventSource.close(); // Limpiar al desmontar
+        return () => eventSource.close(); 
     }, []);
 
     return (

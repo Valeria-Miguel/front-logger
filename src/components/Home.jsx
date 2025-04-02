@@ -15,12 +15,24 @@ const Home = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const navigate = useNavigate();
+    const staticInfo = {
+        alumno: {
+            nombreCompleto: "Dulce Valeria Miguel Juan",
+            grado: "8vo cuatrimestre",
+            grupo: "IDGS11",
+            carrera : "Ingeniería en Desarrollo de Software"
+        },
+        docente: {
+            nombreCompleto: "M.C.C. Emmanuel Martínez Hernández",
+            materia: "SEGURIDAD EN EL DESARROLLO DE APLICACIONES"
+        },
+        appDescription: "Esta aplicación es un sistema de gestión de logs en tiempo real con autenticación de dos factores (MFA). Permite monitorear y registrar todas las actividades del sistema de manera segura."
+    };
 
     useEffect(() => {
         const fetchSystemInfo = async () => {
             try {
                 const token = localStorage.getItem("token");
-                console.log("Token actual:", token); // Debug
                 
                 if (!token) {
                     navigate("/login");
@@ -30,12 +42,11 @@ const Home = () => {
                const response = await axios.get(getApiUrl ('/api/getInfo'), {
                     headers: {
                         Authorization: `Bearer ${token}`,
-                        'Cache-Control': 'no-cache' // Evitar caché
+                        'Cache-Control': 'no-cache' 
                     },
-                    timeout: 5000 // Timeout de 5 segundos
+                    timeout: 5000 
                 });
-    
-                // Verificar respuesta
+
                 if (!response.data.studentInfo) {
                     throw new Error("Estructura de respuesta inválida");
                 }
@@ -48,11 +59,7 @@ const Home = () => {
                     }
                 });
             } catch (err) {
-                console.error("Detalles del error:", {
-                    message: err.message,
-                    response: err.response,
-                    stack: err.stack
-                });
+                console.error("Ocurrió un error. Inténtalo de nuevo más tarde.");
                 
                 if (err.response?.status === 401 || err.message.includes("token")) {
                     localStorage.removeItem("token");
@@ -68,6 +75,7 @@ const Home = () => {
         fetchSystemInfo();
     }, [navigate]);
 
+
     const handleLogout = () => {
         localStorage.removeItem("token");
         navigate("/login");
@@ -79,36 +87,71 @@ const Home = () => {
     return (
         <div className="home-container">
             <header>
-                <h1>Panel de Control</h1>
+                <h1>Panel de Control- Proyecto Final</h1>
                 <button onClick={handleLogout} className="logout-btn">
                     Cerrar Sesión
                 </button>
             </header>
 
-            <div className="info-section">
-                <h2>Información del Sistema</h2>
+            
+            <div className="info-grid">
+              {/*  <div className="info-card">
+                    <h2>Información del Alumno</h2>
+                    <div className="info-content">
+                        <p><strong>Nombre:</strong> {systemInfo.alumno.nombreCompleto}</p>
+                        <p><strong>Grupo:</strong> {systemInfo.alumno.grupo}</p>
+                        <p><strong>Grado:</strong> 5° Cuatrimestre</p>
+                        <p><strong>Carrera:</strong> Ingeniería en Desarrollo de Software</p>
+                    </div>
+                </div>*/}
+                {/* Tarjeta del Alumno */}
                 <div className="info-card">
-                    <h3>Versión de Node.js</h3>
-                    <p>{systemInfo.nodeVersion}</p>
+                    <h2>Información del Alumno</h2>
+                    <div className="info-content">
+                        <div className="info-row">
+                            <span className="info-label">Nombre:</span>
+                            <span className="info-value">{staticInfo.alumno.nombreCompleto}</span>
+                        </div>
+                        <div className="info-row">
+                            <span className="info-label">Grado:</span>
+                            <span className="info-value">{staticInfo.alumno.grado}</span>
+                        </div>
+                        <div className="info-row">
+                            <span className="info-label">Grupo:</span>
+                            <span className="info-value">{staticInfo.alumno.grupo}</span>
+                        </div>
+                        <div className="info-row">
+                            <span className="info-label">Carrera:</span>
+                            <span className="info-value">{staticInfo.alumno.carrera}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="info-card">
+                    <h2>Información del Docente</h2>
+                    <div className="info-content">
+                        <div className="info-row">
+                            <span className="info-label">Nombre:</span>
+                            <span className="info-value">{staticInfo.docente.nombreCompleto}</span>
+                        </div>
+                        <div className="info-row">
+                            <span className="info-label">Materia:</span>
+                            <span className="info-value">{staticInfo.docente.materia}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div className="info-section">
-                <h2>Información del Alumno</h2>
-                <div className="info-card">
-                    <h3>Nombre Completo</h3>
-                    <p>{systemInfo.alumno.nombreCompleto}</p>
-                    
-                    <h3>Grupo</h3>
-                    <p>{systemInfo.alumno.grupo}</p>
-                </div>
+            <div className="app-description">
+                <h2>Acerca de la Aplicación</h2>
+                <p>{staticInfo.appDescription}</p>
             </div>
 
-            <nav className="navigation">
-                <Link to="/logs" className="nav-link">
-                    Ver Registros del Sistema
+            <div className="action-section">
+                <Link to="/logs" className="logs-button">
+                    <i className="fas fa-clipboard-list"></i> Ver Registros del Sistema
                 </Link>
-            </nav>
+            </div>
         </div>
     );
 };

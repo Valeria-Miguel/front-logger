@@ -3,7 +3,7 @@ import axios from "axios";
 import { QRCodeSVG } from "qrcode.react";
 import { useNavigate } from "react-router-dom";
 import { getApiUrl } from '../config/apiConfig';
-
+import './Home.css';
 
 const Register = () => {
     const [email, setEmail] = useState("");
@@ -24,7 +24,6 @@ const Register = () => {
                 headers: { "Content-Type": "application/json" }
             });
             
-            // Asegúrate de que la respuesta contiene mfaUrl
             if (res.data.mfaUrl) {
                 setMfaUrl(res.data.mfaUrl);
             } else {
