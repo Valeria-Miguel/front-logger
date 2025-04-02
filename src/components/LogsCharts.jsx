@@ -1,234 +1,185 @@
-import React, { useState, useEffect } from 'react';
-import { Line, Bar } from 'react-chartjs-2';
+import React from 'react';
+import { Bar } from 'react-chartjs-2';
 import { Chart, registerables } from 'chart.js';
 import './LogsCharts.css';
 
 Chart.register(...registerables);
 
-const LogsCharts = ({ server1Logs, server2Logs }) => {
-    const [timeRange, setTimeRange] = useState('hour');
-    const [selectedMetric, setSelectedMetric] = useState('logLevel');
-    const [timeData, setTimeData] = useState({ labels: [], datasets: [] });
-    const [comparisonData, setComparisonData] = useState({ labels: [], datasets: [] });
-    
-    // Opciones de métricas para comparar
-    const metricOptions = [
-        { value: 'logLevel', label: 'Niveles de Log' },
-        { value: 'method', label: 'Métodos HTTP' },
-        { value: 'status', label: 'Códigos de Estado' },
-        { value: 'responseTime', label: 'Tiempo de Respuesta' },
-    ];
+const LogsCharts = ({ server1Stats, server2Stats, timeRange, onTimeRangeChange }) => {
+    if (!server1Stats || !server2Stats) {
+        return <div className="loading-charts">Cargando gráficas...</div>;
+    }
 
-    // Procesar datos para gráfica temporal
-    useEffect(() => {
-        const processTimeData = () => {
-            const now = new Date();
-            let labels = [];
-            let timeInterval;
+    // Configuración de colores
+    const colors = {
+        server1: {
+            primary: 'rgba(54, 162, 235, 0.7)',
+            border: 'rgba(54, 162, 235, 1)',
+            error: 'rgba(255, 99, 132, 0.7)',
+            warn: 'rgba(255, 206, 86, 0.7)',
+            info: 'rgba(75, 192, 192, 0.7)'
+        },
+        server2: {
+            primary: 'rgba(153, 102, 255, 0.7)',
+            border: 'rgba(153, 102, 255, 1)',
+            error: 'rgba(255, 159, 64, 0.7)',
+            warn: 'rgba(255, 205, 86, 0.7)',
+            info: 'rgba(54, 162, 235, 0.7)'
+        }
+    };
 
-            // Definir intervalos de tiempo según el rango seleccionado
-            switch(timeRange) {
-                case 'hour':
-                    labels = Array.from({ length: 12 }, (_, i) => {
-                        const date = new Date(now);
-                        date.setMinutes(date.getMinutes() - (60 - i*5));
-                        return date.toLocaleTimeString();
-                    });
-                    timeInterval = 5 * 60 * 1000; // 5 minutos
-                    break;
-                case 'day':
-                    labels = Array.from({ length: 24 }, (_, i) => `${i}:00`);
-                    timeInterval = 60 * 60 * 1000; // 1 hora
-                    break;
-                case 'week':
-                    labels = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-                    timeInterval = 24 * 60 * 60 * 1000; // 1 día
-                    break;
-                default:
-                    break;
+    // Gráfica 1: Niveles de Log comparativos
+    const logLevelData = {
+        labels: ['Error', 'Warning', 'Info', 'Debug'],
+        datasets: [
+            {
+                label: 'Servidor 1 (Rate Limit)',
+                data: [
+                    server1Stats.logLevels.error || 0,
+                    server1Stats.logLevels.warn || 0,
+                    server1Stats.logLevels.info || 0,
+                    server1Stats.logLevels.debug || 0
+                ],
+                backgroundColor: colors.server1.primary,
+                borderColor: colors.server1.border,
+                borderWidth: 1,
+                barThickness: 20,
+                maxBarThickness: 30
+            },
+            {
+                label: 'Servidor 2 (Sin Rate Limit)',
+                data: [
+                    server2Stats.logLevels.error || 0,
+                    server2Stats.logLevels.warn || 0,
+                    server2Stats.logLevels.info || 0,
+                    server2Stats.logLevels.debug || 0
+                ],
+                backgroundColor: colors.server2.primary,
+                borderColor: colors.server2.border,
+                borderWidth: 1,
+                barThickness: 20,
+                maxBarThickness: 30
             }
+        ]
+    };
 
-            const processServerData = (logs, serverName, colors) => {
-                const levels = ['info', 'error', 'warn'];
-                return levels.map((level, idx) => {
-                    const data = labels.map((_, i) => {
-                        const startTime = new Date(now.getTime() - (timeInterval * (labels.length - i)));
-                        const endTime = new Date(startTime.getTime() + timeInterval);
-                        
-                        return logs.filter(log => {
-                            const logTime = new Date(log.timestamp);
-                            return log.logLevel === level && 
-                                   logTime >= startTime && 
-                                   logTime < endTime;
-                        }).length;
-                    });
-
-                    return {
-                        label: `${serverName} - ${level}`,
-                        data,
-                        borderColor: colors[idx],
-                        backgroundColor: colors[idx],
-                        tension: 0.3,
-                        borderWidth: 2,
-                        fill: false
-                    };
-                });
-            };
-
-            const server1Datasets = processServerData(
-                server1Logs, 
-                'Servidor 1', 
-                ['#4bc0c0', '#ff6384', '#ffcd56']
-            );
-            
-            const server2Datasets = processServerData(
-                server2Logs, 
-                'Servidor 2', 
-                ['#36a2eb', '#ff9f40', '#9966ff']
-            );
-
-            setTimeData({
-                labels,
-                datasets: [...server1Datasets, ...server2Datasets]
-            });
-        };
-
-        processTimeData();
-    }, [server1Logs, server2Logs, timeRange]);
-
-    // Procesar datos para gráfica de comparación
-    useEffect(() => {
-        const processComparisonData = () => {
-            let labels = [];
-            let server1Data = [];
-            let server2Data = [];
-
-            switch(selectedMetric) {
-                case 'logLevel':
-                    const levels = ['info', 'error', 'warn', 'debug'];
-                    labels = levels;
-                    server1Data = levels.map(l => 
-                        server1Logs.filter(log => log.logLevel === l).length
-                    );
-                    server2Data = levels.map(l => 
-                        server2Logs.filter(log => log.logLevel === l).length
-                    );
-                    break;
-                
-                case 'method':
-                    const methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
-                    labels = methods;
-                    server1Data = methods.map(m => 
-                        server1Logs.filter(log => log.method === m).length
-                    );
-                    server2Data = methods.map(m => 
-                        server2Logs.filter(log => log.method === m).length
-                    );
-                    break;
-                
-                case 'status':
-                    const statusGroups = ['2xx', '3xx', '4xx', '5xx'];
-                    labels = statusGroups;
-                    server1Data = statusGroups.map(s => 
-                        server1Logs.filter(log => Math.floor(log.status/100) === parseInt(s[0])).length
-                    );
-                    server2Data = statusGroups.map(s => 
-                        server2Logs.filter(log => Math.floor(log.status/100) === parseInt(s[0])).length
-                    );
-                    break;
-                
-                case 'responseTime':
-                    const ranges = ['<100ms', '100-500ms', '500-1000ms', '>1000ms'];
-                    labels = ranges;
-                    server1Data = [
-                        server1Logs.filter(log => log.responseTime < 100).length,
-                        server1Logs.filter(log => log.responseTime >= 100 && log.responseTime < 500).length,
-                        server1Logs.filter(log => log.responseTime >= 500 && log.responseTime < 1000).length,
-                        server1Logs.filter(log => log.responseTime >= 1000).length
-                    ];
-                    server2Data = [
-                        server2Logs.filter(log => log.responseTime < 100).length,
-                        server2Logs.filter(log => log.responseTime >= 100 && log.responseTime < 500).length,
-                        server2Logs.filter(log => log.responseTime >= 500 && log.responseTime < 1000).length,
-                        server2Logs.filter(log => log.responseTime >= 1000).length
-                    ];
-                    break;
-                
-                default:
-                    break;
+    // Gráfica 2: Tiempos de respuesta
+    const responseTimeData = {
+        labels: ['<100ms', '100-500ms', '500-1000ms', '>1000ms'],
+        datasets: [
+            {
+                label: 'Servidor 1',
+                data: [
+                    server1Stats.responseTimes['<100ms'] || 0,
+                    server1Stats.responseTimes['100-500ms'] || 0,
+                    server1Stats.responseTimes['500-1000ms'] || 0,
+                    server1Stats.responseTimes['>1000ms'] || 0
+                ],
+                backgroundColor: [
+                    colors.server1.info,
+                    colors.server1.primary,
+                    colors.server1.warn,
+                    colors.server1.error
+                ],
+                borderWidth: 1,
+                barThickness: 20,
+                maxBarThickness: 30
+            },
+            {
+                label: 'Servidor 2',
+                data: [
+                    server2Stats.responseTimes['<100ms'] || 0,
+                    server2Stats.responseTimes['100-500ms'] || 0,
+                    server2Stats.responseTimes['500-1000ms'] || 0,
+                    server2Stats.responseTimes['>1000ms'] || 0
+                ],
+                backgroundColor: [
+                    colors.server2.info,
+                    colors.server2.primary,
+                    colors.server2.warn,
+                    colors.server2.error
+                ],
+                borderWidth: 1,
+                barThickness: 20,
+                maxBarThickness: 30
             }
+        ]
+    };
 
-            setComparisonData({
-                labels,
-                datasets: [
-                    {
-                        label: 'Servidor 1',
-                        data: server1Data,
-                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Servidor 2',
-                        data: server2Data,
-                        backgroundColor: 'rgba(255, 99, 132, 0.7)',
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        borderWidth: 1
-                    }
-                ]
-            });
-        };
+    // Gráfica 3: Barras de tiempo de errores
+    const timelineData = {
+        labels: server1Stats.timeline.map(item => item.timestamp),
+        datasets: [
+            {
+                label: 'Servidor 1 - Errores',
+                data: server1Stats.timeline.map(item => item.byLevel.error || 0),
+                backgroundColor: colors.server1.error,
+                borderColor: colors.server1.border,
+                borderWidth: 1,
+                barThickness: 20,
+                maxBarThickness: 30
+            },
+            {
+                label: 'Servidor 2 - Errores',
+                data: server2Stats.timeline.map(item => item.byLevel.error || 0),
+                backgroundColor: colors.server2.error,
+                borderColor: colors.server2.border,
+                borderWidth: 1,
+                barThickness: 20,
+                maxBarThickness: 30
+            }
+        ]
+    };
 
-        processComparisonData();
-    }, [server1Logs, server2Logs, selectedMetric]);
+    // Gráfica 4: Métodos HTTP como barras
+    const httpMethodsData = {
+        labels: Object.keys(server1Stats.methods),
+        datasets: [
+            {
+                label: 'Servidor 1',
+                data: Object.values(server1Stats.methods),
+                backgroundColor: colors.server1.primary,
+                borderColor: colors.server1.border,
+                borderWidth: 1,
+                barThickness: 20,
+                maxBarThickness: 30
+            },
+            {
+                label: 'Servidor 2',
+                data: Object.values(server2Stats.methods),
+                backgroundColor: colors.server2.primary,
+                borderColor: colors.server2.border,
+                borderWidth: 1,
+                barThickness: 20,
+                maxBarThickness: 30
+            }
+        ]
+    };
 
-    const timeChartOptions = {
+    // Opciones base para todas las gráficas de barras
+    const barChartOptions = {
         responsive: true,
+        maintainAspectRatio: false,
         plugins: {
-            title: {
-                display: true,
-                text: 'Frecuencia de Logs por Tipo y Servidor',
+            legend: {
+                position: 'top',
             },
             tooltip: {
                 mode: 'index',
                 intersect: false,
-            },
-        },
-        scales: {
-            x: {
-                display: true,
-                title: {
-                    display: true,
-                    text: 'Tiempo'
-                }
-            },
-            y: {
-                display: true,
-                title: {
-                    display: true,
-                    text: 'Cantidad de Logs'
-                },
-                beginAtZero: true
             }
         },
-        interaction: {
-            mode: 'nearest',
-            axis: 'x',
-            intersect: false
-        }
-    };
-
-    const comparisonChartOptions = {
-        responsive: true,
-        plugins: {
-            title: {
-                display: true,
-                text: `Comparación de ${metricOptions.find(m => m.value === selectedMetric)?.label}`,
-            },
-        },
         scales: {
             y: {
-                beginAtZero: true
+                beginAtZero: true,
+                grid: {
+                    color: 'rgba(0, 0, 0, 0.1)'
+                }
+            },
+            x: {
+                grid: {
+                    display: false
+                }
             }
         }
     };
@@ -236,42 +187,96 @@ const LogsCharts = ({ server1Logs, server2Logs }) => {
     return (
         <div className="advanced-charts-container">
             <div className="chart-controls">
-                <div className="control-group">
-                    <label>Rango de tiempo:</label>
-                    <select 
-                        value={timeRange} 
-                        onChange={(e) => setTimeRange(e.target.value)}
+                <div className="time-range-selector">
+                    <span>Rango de tiempo:</span>
+                    <button 
+                        className={timeRange === 'hour' ? 'active' : ''}
+                        onClick={() => onTimeRangeChange('hour')}
                     >
-                        <option value="hour">Última hora</option>
-                        <option value="day">Últimas 24 horas</option>
-                        <option value="week">Última semana</option>
-                    </select>
-                </div>
-                
-                <div className="control-group">
-                    <label>Métrica a comparar:</label>
-                    <select 
-                        value={selectedMetric} 
-                        onChange={(e) => setSelectedMetric(e.target.value)}
+                        1 Hora
+                    </button>
+                    <button 
+                        className={timeRange === 'day' ? 'active' : ''}
+                        onClick={() => onTimeRangeChange('day')}
                     >
-                        {metricOptions.map(option => (
-                            <option key={option.value} value={option.value}>
-                                {option.label}
-                            </option>
-                        ))}
-                    </select>
+                        24 Horas
+                    </button>
+                    <button 
+                        className={timeRange === 'week' ? 'active' : ''}
+                        onClick={() => onTimeRangeChange('week')}
+                    >
+                        1 Semana
+                    </button>
                 </div>
             </div>
             
             <div className="charts-grid">
-                <div className="chart-wrapper">
-                    <h3>Distribución Temporal</h3>
-                    <Line data={timeData} options={timeChartOptions} />
+                <div className="chart-container">
+                    <h3>Niveles de Log por Servidor</h3>
+                    <div className="chart-wrapper">
+                        <Bar 
+                            data={logLevelData} 
+                            options={{
+                                ...barChartOptions,
+                                scales: {
+                                    ...barChartOptions.scales,
+                                    y: { ...barChartOptions.scales.y, title: { display: true, text: 'Cantidad' } },
+                                    x: { ...barChartOptions.scales.x, title: { display: true, text: 'Niveles de Log' } }
+                                }
+                            }} 
+                        />
+                    </div>
                 </div>
                 
-                <div className="chart-wrapper">
-                    <h3>Comparación Directa</h3>
-                    <Bar data={comparisonData} options={comparisonChartOptions} />
+                <div className="chart-container">
+                    <h3>Distribución de Tiempos de Respuesta</h3>
+                    <div className="chart-wrapper">
+                        <Bar 
+                            data={responseTimeData} 
+                            options={{
+                                ...barChartOptions,
+                                scales: {
+                                    ...barChartOptions.scales,
+                                    y: { ...barChartOptions.scales.y, title: { display: true, text: 'Cantidad' } },
+                                    x: { ...barChartOptions.scales.x, title: { display: true, text: 'Tiempo de Respuesta' } }
+                                }
+                            }} 
+                        />
+                    </div>
+                </div>
+                
+                <div className="chart-container">
+                    <h3>Evolución de Errores en el Tiempo</h3>
+                    <div className="chart-wrapper">
+                        <Bar 
+                            data={timelineData} 
+                            options={{
+                                ...barChartOptions,
+                                scales: {
+                                    ...barChartOptions.scales,
+                                    y: { ...barChartOptions.scales.y, title: { display: true, text: 'Errores' } },
+                                    x: { ...barChartOptions.scales.x, title: { display: true, text: 'Tiempo' } }
+                                }
+                            }} 
+                        />
+                    </div>
+                </div>
+                
+                <div className="chart-container">
+                    <h3>Métodos HTTP Utilizados</h3>
+                    <div className="chart-wrapper">
+                        <Bar 
+                            data={httpMethodsData} 
+                            options={{
+                                ...barChartOptions,
+                                scales: {
+                                    ...barChartOptions.scales,
+                                    y: { ...barChartOptions.scales.y, title: { display: true, text: 'Cantidad' } },
+                                    x: { ...barChartOptions.scales.x, title: { display: true, text: 'Métodos HTTP' } }
+                                }
+                            }} 
+                        />
+                    </div>
                 </div>
             </div>
         </div>

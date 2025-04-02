@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+/*import React, { useState, useEffect } from 'react';
 import { getApiUrl } from '../config/apiConfig';
 
 const LogStream = () => {
@@ -34,4 +34,4 @@ const LogStream = () => {
     );
 };
 
-export default LogStream;
+export default LogStream;*/
