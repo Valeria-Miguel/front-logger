@@ -5,8 +5,10 @@ import './Logs.css';
 import LogsCharts from './LogsCharts';
 import LogsTable from './LogsTable';
 import LogsFilters from './LogsFilters';
+import { useNavigate } from 'react-router-dom';
 
 const Logs = () => {
+    const navigate = useNavigate();
     const [logsData, setLogsData] = useState({
         server1: { logs: [], stats: null, loading: true, error: null },
         server2: { logs: [], stats: null, loading: true, error: null }
@@ -148,7 +150,9 @@ const Logs = () => {
     return (
         <div className="logs-container">
             <h1>Monitor de Logs</h1>
-            
+            <button onClick={() => navigate('/home')}>
+                Regresar al Inicio
+            </button>
             <div className="controls">
                 <div className="server-tabs">
                     <button onClick={() => setActiveTab('server1')} className={`tab-button ${activeTab === 'server1' ? 'active' : ''}`}>
